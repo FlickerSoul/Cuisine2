@@ -31,6 +31,7 @@ import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.IFluidHandlerItem;
 import net.minecraftforge.fluids.capability.templates.FluidHandlerItemStack;
 import snownee.cuisine.api.CuisineAPI;
+import snownee.cuisine.api.CuisineConst;
 import snownee.cuisine.api.CuisineRegistries;
 import snownee.cuisine.api.registry.Spice;
 import snownee.kiwi.item.ModItem;
@@ -44,9 +45,8 @@ public class SpiceBottleItem extends ModItem {
     public static final int VOLUME_PER_ITEM = 10;
     public static final int FLUID_PER_VOLUME = FluidAttributes.BUCKET_VOLUME / VOLUME_PER_ITEM;
 
-    public static final String SPICE = "spice";
-    public static final String SPICE_VALUE = "spice.value";
-    public static final String SPICE_NAME = "spice.name";
+    public static final String SPICE_VALUE = "Spice.Value";
+    public static final String SPICE_NAME = "Spice.Name";
 
     public SpiceBottleItem(int maxVolume, Properties builder) {
         super(builder.maxStackSize(1));
@@ -106,7 +106,7 @@ public class SpiceBottleItem extends ModItem {
     public boolean hasSpice(ItemStack container) {
         NBTHelper nbt = NBTHelper.of(container);
         if (nbt.getInt(SPICE_VALUE) == 0) {
-            nbt.remove(SPICE);
+            nbt.remove(CuisineConst.SPICE);
             return false;
         }
         return true;
@@ -135,7 +135,7 @@ public class SpiceBottleItem extends ModItem {
         @Override
         public void setContainerToEmpty() {
             container.removeChildTag(FLUID_NBT_KEY);
-            container.removeChildTag(SPICE);
+            container.removeChildTag(CuisineConst.SPICE);
         }
 
         @Override
@@ -218,10 +218,6 @@ public class SpiceBottleItem extends ModItem {
         return false;
     }
 
-    public boolean isContainerEmpty(ItemStack stack) {
-        return !hasSpice(stack);
-    }
-
     @Override
     @Nonnull
     public UseAction getUseAction(ItemStack stack) {
@@ -241,7 +237,7 @@ public class SpiceBottleItem extends ModItem {
     @Nonnull
     public ActionResult<ItemStack> onItemRightClick(World worldIn, PlayerEntity playerIn, @Nonnull Hand handIn) {
         ItemStack held = playerIn.getHeldItem(handIn);
-        if (!isContainerEmpty(held)) {
+        if (hasSpice(held)) {
             playerIn.setActiveHand(handIn);
             return (getUseAction(held) == UseAction.NONE ? ActionResult.func_226250_c_(held) : ActionResult.func_226249_b_(held));
         }
@@ -262,6 +258,7 @@ public class SpiceBottleItem extends ModItem {
             NBTHelper nbt = NBTHelper.of(stack);
             CuisineRegistries.SPICES.getKeys().forEach(i -> {
                 nbt.setString(SPICE_NAME, i.toString());
+                //FIXME illegal item. spice value?
                 items.add(stack.copy());
             });
         }
@@ -270,17 +267,17 @@ public class SpiceBottleItem extends ModItem {
     @Override
     @Nonnull
     public ITextComponent getDisplayName(@Nonnull ItemStack stack) {
-        String name = NBTHelper.of(stack).getString(SPICE_NAME);
-        if (name == null)
-            return super.getDisplayName(stack);
+        Optional<Spice> spice = getSpice(stack);
+        if (spice.isPresent())
+            return spice.get().getDisplayName();
         else
-            return new TranslationTextComponent("cuisine.spice." + name.replace(':', '.'));
+            return super.getDisplayName(stack);
     }
 
     @Override
     @OnlyIn(Dist.CLIENT)
     public void addInformation(ItemStack stack, @Nullable World worldIn, List<ITextComponent> tooltip, ITooltipFlag flagIn) {
-        if (isContainerEmpty(stack)) {
+        if (!hasSpice(stack)) {
             return;
         }
         tooltip.add(new TranslationTextComponent("cuisine.spice_bottle.rest").appendText(String.format(":%d/%d", getDurability(stack), maxVolume)));
