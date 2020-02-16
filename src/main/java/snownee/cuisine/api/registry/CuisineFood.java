@@ -10,13 +10,15 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.IItemProvider;
 import net.minecraft.util.Util;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.ForgeRegistryEntry;
+import snownee.cuisine.api.LogicalServerSide;
 
-public class CuisineFood extends ForgeRegistryEntry<CuisineFood> {
+public class CuisineFood extends ForgeRegistryEntry<CuisineFood> implements IItemProvider {
 
     private Item item = Items.AIR;
     private Block block = Blocks.AIR;
@@ -28,7 +30,8 @@ public class CuisineFood extends ForgeRegistryEntry<CuisineFood> {
     private CuisineFood() {}
 
     @Nullable
-    public Item getItem() {
+    @Override
+    public Item asItem() {
         if (item != Items.AIR) {
             return item;
         } else {
@@ -38,7 +41,7 @@ public class CuisineFood extends ForgeRegistryEntry<CuisineFood> {
     }
 
     public ItemStack getItemStack() {
-        Item item = getItem();
+        Item item = asItem();
         return item == null ? ItemStack.EMPTY : new ItemStack(item);
     }
 
@@ -47,14 +50,19 @@ public class CuisineFood extends ForgeRegistryEntry<CuisineFood> {
         return block != Blocks.AIR ? block : null;
     }
 
+    @LogicalServerSide
+    public boolean validate() {
+        return asItem() != null;
+    }
+
     public ITextComponent getDisplayName() {
         return new TranslationTextComponent(getTranslationKey());
     }
 
     public String getTranslationKey() {
         if (translationKey == null) {
-            if (getItem() != null) {
-                translationKey = getItem().getTranslationKey();
+            if (asItem() != null) {
+                translationKey = asItem().getTranslationKey();
             } else if (getBlock() != null) {
                 translationKey = getBlock().getTranslationKey();
             } else {

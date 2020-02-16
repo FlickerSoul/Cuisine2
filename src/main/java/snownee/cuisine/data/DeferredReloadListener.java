@@ -1,10 +1,7 @@
 package snownee.cuisine.data;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -33,6 +30,7 @@ public enum DeferredReloadListener implements IFutureReloadListener {
     @Override
     public CompletableFuture<Void> reload(IStage stage, IResourceManager resourceManager, IProfiler preparationsProfiler, IProfiler reloadProfiler, Executor backgroundExecutor, Executor gameExecutor) {
         count = 0;
+        Tweaker.clear();
         Function<IFutureReloadListener, CompletableFuture<?>> mapper = listener -> listener.reload(DummyStage.INSTANCE, resourceManager, preparationsProfiler, reloadProfiler, backgroundExecutor, gameExecutor);
         /* off */
         return stage
@@ -42,14 +40,6 @@ public enum DeferredReloadListener implements IFutureReloadListener {
                 .thenCompose($ -> make(LoadingStage.TAG, mapper))
                 .thenCompose($ -> make(LoadingStage.RECIPE, mapper));
         /* on */
-    }
-
-    public void waitForRegistries() {
-        try {
-            registryCompleted.get(1, TimeUnit.SECONDS); //FIXME
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            Cuisine.logger.catching(e);
-        }
     }
 
     public synchronized <T extends IForgeRegistryEntry<T>> void complete(IForgeRegistry<T> registry) {

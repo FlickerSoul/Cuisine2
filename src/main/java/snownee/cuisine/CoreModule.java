@@ -2,6 +2,7 @@ package snownee.cuisine;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.Maps;
@@ -14,7 +15,8 @@ import net.minecraft.command.arguments.IArgumentSerializer;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.item.Item;
-import net.minecraft.resources.IReloadableResourceManager;
+import net.minecraft.resources.SimpleReloadableResourceManager;
+import net.minecraft.tags.NetworkTagManager;
 import net.minecraft.tags.Tag;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraftforge.api.distmarker.Dist;
@@ -54,6 +56,7 @@ import snownee.cuisine.impl.bonus.EffectsBonus;
 import snownee.cuisine.impl.bonus.NewMaterialBonus;
 import snownee.cuisine.impl.rule.CountRegistryRecipeRule;
 import snownee.cuisine.util.ForgeRegistryArgument;
+import snownee.cuisine.util.Tweaker;
 import snownee.kiwi.AbstractModule;
 import snownee.kiwi.Kiwi;
 import snownee.kiwi.KiwiModule;
@@ -71,7 +74,7 @@ public final class CoreModule extends AbstractModule {
 
     static CuisineNetworkTagManager networkTagManager;
 
-    private static ResearchData researchData = new ResearchData();
+    private static ResearchData researchData;
 
     public CoreModule() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -137,18 +140,30 @@ public final class CoreModule extends AbstractModule {
     protected void serverInit(FMLServerAboutToStartEvent event) {
         Cuisine.server = event.getServer();
         if (materialManager == null) {
-            materialManager = new CuisineDataManager("cuisine_material", CuisineRegistries.MATERIALS).setCallback(CoreModule::buildMaterialMap);
-            spiceManager = new CuisineDataManager("cuisine_spice", CuisineRegistries.SPICES).setCallback(CoreModule::buildSpiceMap);
-            foodManager = new CuisineDataManager("cuisine_food", CuisineRegistries.FOODS).setCallback(CoreModule::buildFoodMap);
-            recipeManager = new CuisineRecipeManager("cuisine_recipe", CuisineRegistries.RECIPES).setVerifier(CuisineRecipe::validate);
+            materialManager = new CuisineDataManager<>("cuisine_material", CuisineRegistries.MATERIALS).setValidator(Material::validate).setCallback(CoreModule::buildMaterialMap);
+            spiceManager = new CuisineDataManager<>("cuisine_spice", CuisineRegistries.SPICES).setValidator(Spice::validate).setCallback(CoreModule::buildSpiceMap);
+            foodManager = new CuisineDataManager<>("cuisine_food", CuisineRegistries.FOODS).setValidator(CuisineFood::validate).setCallback(CoreModule::buildFoodMap);
+            recipeManager = new CuisineRecipeManager("cuisine_recipe", CuisineRegistries.RECIPES).setValidator(CuisineRecipe::validate);
         }
-        IReloadableResourceManager manager = event.getServer().getResourceManager();
+        researchData = new ResearchData();
+        SimpleReloadableResourceManager manager = (SimpleReloadableResourceManager) event.getServer().getResourceManager();
         DeferredReloadListener.INSTANCE.listeners.put(LoadingStage.REGISTRY, materialManager);
         DeferredReloadListener.INSTANCE.listeners.put(LoadingStage.REGISTRY, spiceManager);
         DeferredReloadListener.INSTANCE.listeners.put(LoadingStage.REGISTRY, foodManager);
         DeferredReloadListener.INSTANCE.listeners.put(LoadingStage.TAG, networkTagManager);
         DeferredReloadListener.INSTANCE.listeners.put(LoadingStage.RECIPE, recipeManager);
-        manager.addReloadListener(DeferredReloadListener.INSTANCE);
+        NetworkTagManager tagManager = Cuisine.server.getNetworkTagManager();
+        addAfter(manager.reloadListeners, tagManager, DeferredReloadListener.INSTANCE);
+        addAfter(manager.initTaskQueue, tagManager, DeferredReloadListener.INSTANCE);
+    }
+
+    private static <T> void addAfter(List<T> listeners, T listener, T add) {
+        for (int i = 0; i < listeners.size(); i++) {
+            if (listeners.get(i) == listener) {
+                listeners.add(i + 1, add);
+                break;
+            }
+        }
     }
 
     //Snownee: will we keep the insert order?
@@ -201,8 +216,8 @@ public final class CoreModule extends AbstractModule {
         item2Food.clear();
         block2Food.clear();
         for (CuisineFood food : CuisineRegistries.FOODS.getValues()) {
-            if (food.getItem() != null) {
-                item2Food.put(food.getItem(), food);
+            if (food.asItem() != null) {
+                item2Food.put(food.asItem(), food);
             }
             if (food.getBlock() != null) {
                 block2Food.put(food.getBlock(), food);
@@ -223,6 +238,7 @@ public final class CoreModule extends AbstractModule {
         new SSyncRegistryPacket(CuisineRegistries.FOODS).send(player);
         new SSyncTagsPacket(networkTagManager).send(player);
         new SSyncRegistryPacket(CuisineRegistries.RECIPES).send(player);
+        Tweaker.sync(player);
     }
 
     public static void setNetworkTagManager(CuisineNetworkTagManager networkTagManager) {
@@ -243,5 +259,9 @@ public final class CoreModule extends AbstractModule {
 
     public static ResearchData getResearchData() {
         return Cuisine.getServer().getWorld(DimensionType.OVERWORLD).getSavedData().getOrCreate(() -> researchData, researchData.getName());
+    }
+
+    public static void makeResearchDataDirty() {
+        researchData.markDirty();
     }
 }
