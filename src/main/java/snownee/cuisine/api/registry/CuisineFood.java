@@ -10,6 +10,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.Util;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -21,6 +22,8 @@ public class CuisineFood extends ForgeRegistryEntry<CuisineFood> {
     private Block block = Blocks.AIR;
     @SerializedName("max_stars")
     private int maxStars = 2;
+    @SerializedName("translation_key")
+    private String translationKey;
 
     private CuisineFood() {}
 
@@ -49,12 +52,16 @@ public class CuisineFood extends ForgeRegistryEntry<CuisineFood> {
     }
 
     public String getTranslationKey() {
-        if (getItem() != null) {
-            return getItem().getTranslationKey();
-        } else if (getBlock() != null) {
-            return getBlock().getTranslationKey();
+        if (translationKey == null) {
+            if (getItem() != null) {
+                translationKey = getItem().getTranslationKey();
+            } else if (getBlock() != null) {
+                translationKey = getBlock().getTranslationKey();
+            } else {
+                translationKey = Util.makeTranslationKey("cuisine.food", getRegistryName());
+            }
         }
-        return "cuisine.food." + String.valueOf(getRegistryName()).replace(':', '.');
+        return translationKey;
     }
 
     @Override

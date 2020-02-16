@@ -14,9 +14,12 @@ import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.IRecipeSerializer;
 import net.minecraft.tileentity.TileEntityType;
+import net.minecraft.world.dimension.DimensionType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
+import snownee.cuisine.Cuisine;
 import snownee.cuisine.api.CuisineAPI;
 import snownee.cuisine.base.block.SpiceRackBlock;
 import snownee.cuisine.base.client.SpiceRackScreen;
@@ -30,6 +33,7 @@ import snownee.kiwi.AbstractModule;
 import snownee.kiwi.KiwiManager;
 import snownee.kiwi.KiwiModule;
 import snownee.kiwi.Name;
+import snownee.kiwi.NoGroup;
 import snownee.kiwi.item.ModItem;
 
 @KiwiModule(name = "base", dependencies = "@core")
@@ -58,6 +62,7 @@ public class BaseModule extends AbstractModule {
     public static final ContainerType<SpiceRackContainer> SPICE_RACK_CONTAINER = new ContainerType<>(SpiceRackContainer::new);
 
     public static final ManualItem MANUAL = new ManualItem();
+    @NoGroup
     public static final RecipeItem RECIPE = new RecipeItem();
     public static final ModItem SALT = new ModItem(itemProp());
     public static final ModItem BROWN_SUGAR = new ModItem(itemProp());
@@ -71,4 +76,8 @@ public class BaseModule extends AbstractModule {
         ScreenManager.registerFactory(SPICE_RACK_CONTAINER, SpiceRackScreen::new);
     }
 
+    @Override
+    protected void serverInit(FMLServerStartingEvent event) {
+        Cuisine.getServer().getWorld(DimensionType.OVERWORLD).getSavedData();
+    }
 }

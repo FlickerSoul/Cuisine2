@@ -71,7 +71,7 @@ public final class CoreModule extends AbstractModule {
 
     static CuisineNetworkTagManager networkTagManager;
 
-    static ResearchData researchData = new ResearchData();
+    private static ResearchData researchData = new ResearchData();
 
     public CoreModule() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -124,8 +124,6 @@ public final class CoreModule extends AbstractModule {
 
     @Override
     protected void serverInit(FMLServerStartingEvent event) {
-        event.getServer().getWorld(DimensionType.OVERWORLD).getSavedData().getOrCreate(() -> researchData, researchData.getName());
-
         LiteralArgumentBuilder<CommandSource> builder = CuisineCommand.init(event.getCommandDispatcher());
         event.getCommandDispatcher().register(builder);
     }
@@ -153,7 +151,7 @@ public final class CoreModule extends AbstractModule {
         manager.addReloadListener(DeferredReloadListener.INSTANCE);
     }
 
-    //TODO Snownee: will we keep the insert order?
+    //Snownee: will we keep the insert order?
     static Map<Item, Material> item2Material = Maps.newIdentityHashMap();
     static Map<Item, Spice> item2Spice = Maps.newIdentityHashMap();
     static Map<Fluid, Spice> fluid2Spice = Maps.newIdentityHashMap();
@@ -243,4 +241,7 @@ public final class CoreModule extends AbstractModule {
         return Collections.unmodifiableCollection(item2Food.keySet());
     }
 
+    public static ResearchData getResearchData() {
+        return Cuisine.getServer().getWorld(DimensionType.OVERWORLD).getSavedData().getOrCreate(() -> researchData, researchData.getName());
+    }
 }

@@ -1,6 +1,5 @@
 package snownee.cuisine.client;
 
-import com.google.common.base.MoreObjects;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.IVertexBuilder;
@@ -14,14 +13,12 @@ import net.minecraft.client.renderer.Vector3f;
 import net.minecraft.client.renderer.color.ItemColors;
 import net.minecraft.client.renderer.model.ItemCameraTransforms.TransformType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.item.FilledMapItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
 import net.minecraft.util.HandSide;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.storage.MapData;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.ColorHandlerEvent;
@@ -31,8 +28,11 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import snownee.cuisine.base.BaseModule;
+import snownee.cuisine.base.item.RecipeItem;
 import snownee.cuisine.base.item.SpiceBottleItem;
+import snownee.cuisine.data.RecordData;
 
+@SuppressWarnings("deprecation")
 @OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(bus = Bus.MOD, value = Dist.CLIENT)
 public final class CuisineItemRendering {
@@ -66,18 +66,15 @@ public final class CuisineItemRendering {
         }
         event.setCanceled(true);
         HandSide handside = event.getHand() == Hand.MAIN_HAND ? MC.player.getPrimaryHand() : MC.player.getPrimaryHand().opposite();
-        // https://github.com/MinecraftForge/MinecraftForge/pull/6496
-        Hand hand = MoreObjects.firstNonNull(MC.player.swingingHand, Hand.MAIN_HAND);
-        float swingProgress = hand == event.getHand() ? MC.player.getSwingProgress(event.getPartialTicks()) : 0;
         event.getMatrixStack().push();
-        renderMapFirstPersonSide(event.getMatrixStack(), event.getBuffers(), event.getLight(), event.getEquipProgress(), handside, swingProgress, stack);
+        renderMapFirstPersonSide(event.getMatrixStack(), event.getBuffers(), event.getLight(), event.getEquipProgress(), handside, event.getSwingProgress(), stack);
         event.getMatrixStack().pop();
         //TODO
     }
 
     private static void renderMapFirstPersonSide(MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int combinedLightIn, float equippedProgress, HandSide handIn, float swingProgress, ItemStack stack) {
         float f = handIn == HandSide.RIGHT ? 1.0F : -1.0F;
-        matrixStackIn.translate((double) (f * 0.125F), -0.125D, 0.0D);
+        matrixStackIn.translate(f * 0.125F, -0.125D, 0.0D);
         if (!MC.player.isInvisible()) {
             matrixStackIn.push();
             matrixStackIn.rotate(Vector3f.ZP.rotationDegrees(f * 10.0F));
@@ -86,13 +83,13 @@ public final class CuisineItemRendering {
         }
 
         matrixStackIn.push();
-        matrixStackIn.translate((double) (f * 0.51F), (double) (-0.08F + equippedProgress * -1.2F), -0.75D);
+        matrixStackIn.translate(f * 0.51F, -0.08F + equippedProgress * -1.2F, -0.75D);
         float f1 = MathHelper.sqrt(swingProgress);
         float f2 = MathHelper.sin(f1 * (float) Math.PI);
         float f3 = -0.5F * f2;
         float f4 = 0.4F * MathHelper.sin(f1 * ((float) Math.PI * 2F));
         float f5 = -0.3F * MathHelper.sin(swingProgress * (float) Math.PI);
-        matrixStackIn.translate((double) (f * f3), (double) (f4 - 0.3F * f2), (double) f5);
+        matrixStackIn.translate(f * f3, f4 - 0.3F * f2, f5);
         matrixStackIn.rotate(Vector3f.XP.rotationDegrees(f2 * -45.0F));
         matrixStackIn.rotate(Vector3f.YP.rotationDegrees(f * f2 * -30.0F));
         renderMapFirstPerson(matrixStackIn, bufferIn, combinedLightIn, stack);
@@ -107,15 +104,15 @@ public final class CuisineItemRendering {
         //matrixStackIn.translate(-0.5D, -0.5D, 0.0D);
         matrixStackIn.scale(0.01F, 0.01F, 0.01F);
         //matrixStackIn.scale(0.0078125F, 0.0078125F, 0.0078125F);
-        MapData mapdata = FilledMapItem.getMapData(stack, MC.world);
-        IVertexBuilder ivertexbuilder = bufferIn.getBuffer(mapdata == null ? MAP_BACKGROUND : MAP_BACKGROUND_CHECKERBOARD);
+        RecordData data = RecipeItem.getData(stack);
+        IVertexBuilder ivertexbuilder = bufferIn.getBuffer(data != null ? MAP_BACKGROUND : MAP_BACKGROUND_CHECKERBOARD);
         Matrix4f matrix4f = matrixStackIn.getLast().getPositionMatrix();
         ivertexbuilder.pos(matrix4f, -7.0F, 135.0F, 0.0F).color(255, 255, 255, 255).tex(0.0F, 1.0F).lightmap(combinedLightIn).endVertex();
         ivertexbuilder.pos(matrix4f, 135.0F, 135.0F, 0.0F).color(255, 255, 255, 255).tex(1.0F, 1.0F).lightmap(combinedLightIn).endVertex();
         ivertexbuilder.pos(matrix4f, 135.0F, -7.0F, 0.0F).color(255, 255, 255, 255).tex(1.0F, 0.0F).lightmap(combinedLightIn).endVertex();
         ivertexbuilder.pos(matrix4f, -7.0F, -7.0F, 0.0F).color(255, 255, 255, 255).tex(0.0F, 0.0F).lightmap(combinedLightIn).endVertex();
-        if (mapdata != null) {
-            MC.gameRenderer.getMapItemRenderer().renderMap(matrixStackIn, bufferIn, mapdata, false, combinedLightIn);
+        if (data == null) {
+            return;
         }
         matrixStackIn.push();
         RenderSystem.setupGuiFlatDiffuseLighting();
