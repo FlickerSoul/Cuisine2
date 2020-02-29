@@ -11,13 +11,16 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import snownee.cuisine.api.CuisineAPI;
 import snownee.cuisine.api.registry.Cookware;
 import snownee.cuisine.cookware.block.CookwareBlock;
 import snownee.cuisine.cookware.client.CookwareScreen;
 import snownee.cuisine.cookware.container.BowlContainer;
 import snownee.cuisine.cookware.container.CookwareContainer;
 import snownee.cuisine.cookware.network.CBeginCookingPacket;
+import snownee.cuisine.cookware.network.SUpdateSpicesPacket;
 import snownee.cuisine.cookware.tile.CookwareTile;
+import snownee.cuisine.cookware.tile.HeatingCookwareTile;
 import snownee.kiwi.AbstractModule;
 import snownee.kiwi.KiwiModule;
 import snownee.kiwi.Name;
@@ -25,7 +28,7 @@ import snownee.kiwi.network.NetworkChannel;
 
 @KiwiModule(name = "cookware", dependencies = "@core")
 @KiwiModule.Optional
-@KiwiModule.Group("decorations")
+@KiwiModule.Group(CuisineAPI.MODID)
 public final class CookwareModule extends AbstractModule {
 
     public static final CookwareBlock OVEN = new CookwareBlock(blockProp(Material.IRON));
@@ -40,7 +43,7 @@ public final class CookwareModule extends AbstractModule {
     @Name("saucepan")
     public static final Cookware SAUCEPAN_TYPE = new Cookware();
     @Name("saucepan")
-    public static final TileEntityType<CookwareTile> SAUCEPAN_TILE = TileEntityType.Builder.create(() -> new CookwareTile(SAUCEPAN_TYPE), SAUCEPAN).build(null);
+    public static final TileEntityType<HeatingCookwareTile> SAUCEPAN_TILE = TileEntityType.Builder.create(() -> new HeatingCookwareTile(SAUCEPAN_TYPE), SAUCEPAN).build(null);
     @Name("saucepan")
     public static final ContainerType<CookwareContainer> SAUCEPAN_CONTAINER = new ContainerType<>((id, inv) -> new CookwareContainer(SAUCEPAN_TYPE, id, inv));
 
@@ -63,6 +66,7 @@ public final class CookwareModule extends AbstractModule {
     @Override
     protected void preInit() {
         NetworkChannel.register(CBeginCookingPacket.class, new CBeginCookingPacket.Handler());
+        NetworkChannel.register(SUpdateSpicesPacket.class, new SUpdateSpicesPacket.Handler());
     }
 
     @Override

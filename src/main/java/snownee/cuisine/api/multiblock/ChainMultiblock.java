@@ -56,7 +56,9 @@ public abstract class ChainMultiblock<T extends IMasterHandler, X> implements Su
         }
         if (all == null) {
             T hanlder = createNewHandler();
-            hanlder.addMultiblock(this);
+            if (compound == null) {
+                hanlder.addMultiblock(this);
+            }
             handlerCap = LazyOptional.of(() -> hanlder);
         }
     }
@@ -221,6 +223,9 @@ public abstract class ChainMultiblock<T extends IMasterHandler, X> implements Su
             CompoundNBT element = (CompoundNBT) e;
             BlockPos pos = NBTUtil.readBlockPos(element);
             Supplier<ChainMultiblock<T, X>> multiblock = Lazy.of(() -> {
+                if (!this.tile.getWorld().isBlockPresent(pos)) {
+                    return null;
+                }
                 TileEntity tile = this.tile.getWorld().getTileEntity(pos);
                 if (tile != null) {
                     return tile.getCapability(CuisineCapabilities.MULTIBLOCK).orElse(null);
@@ -245,8 +250,8 @@ public abstract class ChainMultiblock<T extends IMasterHandler, X> implements Su
                 ChainMultiblock<T, X> mb = $.get();
                 if (mb != this) {
                     mb.master = this;
-                    get().addMultiblock(mb);
                 }
+                get().addMultiblock(mb);
             });
             return true;
         }));

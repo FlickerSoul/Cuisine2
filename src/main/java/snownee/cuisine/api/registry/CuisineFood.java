@@ -2,6 +2,7 @@ package snownee.cuisine.api.registry;
 
 import javax.annotation.Nullable;
 
+import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 import net.minecraft.block.Block;
@@ -15,15 +16,18 @@ import net.minecraft.util.Util;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.ForgeRegistryEntry;
 import snownee.cuisine.api.LogicalServerSide;
 
-public class CuisineFood extends ForgeRegistryEntry<CuisineFood> implements IItemProvider {
+public class CuisineFood extends CuisineRegistryEntry<CuisineFood> implements IItemProvider {
 
+    @Expose
     private Item item = Items.AIR;
+    @Expose
     private Block block = Blocks.AIR;
+    @Expose
     @SerializedName("max_stars")
     private int maxStars = 2;
+    @Expose
     @SerializedName("translation_key")
     private String translationKey;
 
@@ -50,11 +54,13 @@ public class CuisineFood extends ForgeRegistryEntry<CuisineFood> implements IIte
         return block != Blocks.AIR ? block : null;
     }
 
+    @Override
     @LogicalServerSide
     public boolean validate() {
-        return asItem() != null;
+        return valid = asItem() != null;
     }
 
+    @Override
     public ITextComponent getDisplayName() {
         return new TranslationTextComponent(getTranslationKey());
     }

@@ -3,25 +3,24 @@ package snownee.cuisine.data.network;
 import java.util.Collection;
 import java.util.function.Supplier;
 
-import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.network.NetworkEvent.Context;
-import net.minecraftforge.fml.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistry;
 import net.minecraftforge.registries.IForgeRegistryEntry;
 import net.minecraftforge.registries.RegistryManager;
 import snownee.cuisine.api.registry.CuisineFood;
 import snownee.cuisine.api.registry.CuisineRecipe;
+import snownee.cuisine.api.registry.CuisineRegistryEntry;
 import snownee.cuisine.api.registry.Material;
 import snownee.cuisine.api.registry.RegistrySerializer;
 import snownee.cuisine.api.registry.Spice;
+import snownee.cuisine.base.network.PlayerPacket;
 import snownee.cuisine.data.DeferredDataReloader;
-import snownee.kiwi.network.Packet;
 
-public class SSyncRegistryPacket<T extends IForgeRegistryEntry<T>> extends Packet {
+public class SSyncRegistryPacket<T extends CuisineRegistryEntry<T>> extends PlayerPacket {
 
     public final ForgeRegistry<T> registry;
     public final RegistrySerializer<T> serializer;
@@ -37,14 +36,11 @@ public class SSyncRegistryPacket<T extends IForgeRegistryEntry<T>> extends Packe
         this.buf = buf;
     }
 
-    public void send(ServerPlayerEntity player) {
-        send(PacketDistributor.PLAYER.with(() -> player));
-    }
-
     public void handle() {
         boolean noWarning = true;
         ModLoadingContext ctx = ModLoadingContext.get();
         registry.unfreeze();
+        registry.getValues().forEach(CuisineRegistryEntry::invalidate);
         registry.clear();
         int n = buf.readVarInt();
         for (int i = 0; i < n; i++) {
@@ -86,7 +82,7 @@ public class SSyncRegistryPacket<T extends IForgeRegistryEntry<T>> extends Packe
 
     }
 
-    public static <T extends IForgeRegistryEntry<T>> RegistrySerializer<T> getSerializer(ForgeRegistry<T> registry) {
+    public static <T extends CuisineRegistryEntry<T>> RegistrySerializer<T> getSerializer(ForgeRegistry<T> registry) {
         switch (registry.getRegistryName().getPath()) {
         case "material":
             return (RegistrySerializer<T>) new Material.Serializer();

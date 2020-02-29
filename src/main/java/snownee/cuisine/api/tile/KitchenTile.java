@@ -11,18 +11,19 @@ import snownee.cuisine.api.multiblock.KitchenMultiblock;
 import snownee.kiwi.tile.TextureTile;
 import snownee.kiwi.util.NBTHelper;
 
-public abstract class KitchenTile extends TextureTile {
+public class KitchenTile extends TextureTile {
 
     protected KitchenMultiblock multiblock;
     protected LazyOptional<KitchenMultiblock> multiblockOptional;
 
     public KitchenTile(TileEntityType<?> tileEntityTypeIn, String... textureKeys) {
         super(tileEntityTypeIn, textureKeys);
+        persistData = false;
     }
 
     @Override
     public CompoundNBT getUpdateTag() {
-        return writePacketData(new CompoundNBT());
+        return writePacketData(writeInternal(new CompoundNBT()));
     }
 
     @Override
@@ -31,6 +32,7 @@ public abstract class KitchenTile extends TextureTile {
         if (world == null) {
             multiblock = new KitchenMultiblock(this, data.getTag("Multiblock"), getItemHandler());
         }
+        super.readPacketData(compound);
         super.read(compound);
     }
 
@@ -39,6 +41,7 @@ public abstract class KitchenTile extends TextureTile {
         if (multiblock != null) {
             compound.put("Multiblock", multiblock.serializeNBT());
         }
+        super.writePacketData(compound);
         return super.write(compound);
     }
 
@@ -89,6 +92,10 @@ public abstract class KitchenTile extends TextureTile {
             multiblockOptional.invalidate();
             multiblockOptional = null;
         }
+    }
+
+    public ISpiceHandler getSpiceHandler() {
+        return multiblock.get();
     }
 
 }
